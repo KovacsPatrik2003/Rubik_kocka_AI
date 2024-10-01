@@ -1,83 +1,37 @@
 class Cube:
     def __init__(self, n):
-        self.CubeSize = n
-        self.Cube=self.CreateCube(self.CubeSize)
+        self.cube_size = n
+        self.Cube=self.create_cube()
 
     @property
-    def CubeSize(self):
+    def cube_size(self):
         return self._cubeSize
     
-    @CubeSize.setter
-    def CubeSize(self,n):
+    @cube_size.setter
+    def cube_size(self,n):
         self._cubeSize=n
 
-    def CreateCube(self, n):
-        nSizeCube={
-            'F':[['G' for j in range(n)] for i in range(n)], # Front: Green
+
+    def create_cube(self):
+        n=self.cube_size
+        n_size_cube={
+            'F':[['G' for _ in range(n)] for _ in range(n)], # Front: Green
             'B':[['B' for _ in range(n)] for _ in range(n)], # Back: Blue
             'L':[['O' for _ in range(n)] for _ in range(n)], # Left: Orange
             'R':[['R' for _ in range(n)] for _ in range(n)], # Right: Red
             'T':[['W' for _ in range(n)] for _ in range(n)], # Top: White
-            'D':[['Y' for _ in range(n)] for _ in range(n)], # Down: Yellow        
+            'D':[['Y' for _ in range(n)] for _ in range(n)], # Down: Yellow
         }
-        # nSizeCube=""
-        # szamlalo=-1
-        # for i in range(6):
-        #     for j in range(n):
-        #         for k in range(n):
-        #             szamlalo+=1
-        #             if i==0:
-        #                 nSizeCube+=str(szamlalo)
-        #             elif i==1:
-        #                 nSizeCube+='B'
-        #             elif i==2:
-        #                 nSizeCube+='O'
-        #             elif i==3:
-        #                 nSizeCube+='R'
-        #             elif i==4:
-        #                 nSizeCube+='w'
-        #             elif i==5:
-        #                 nSizeCube+='Y'
-                        
-        return nSizeCube
+        return n_size_cube
     
-    def Print_Cube(self):
+    def print_cube(self):
         for i in self.Cube.items():
             print(self.Cube[i[0]])
-    
-    def CubeRotation(self, proba, page):
-        #selected page rotation
-        thisPageNodes=list()
-        for row in proba:
-            for node in row:
-                thisPageNodes.append(node)
-        firstNode=thisPageNodes[0]
-        variable=firstNode
-        for i in range(len(thisPageNodes)-1):
-            actualNode=variable
-            nextNode=thisPageNodes[i+1]
-            thisPageNodes[i+1]=actualNode
-            variable=nextNode
-        thisPageNodes[0]=variable
 
-
-        # the front page rotation is done. remainder: have to return this list as a dictionary
-        resultDict={page: []}
-        counter=0
-        helperList=list()
-        for i in thisPageNodes:
-            
-            if counter%3!=0:
-                helperList.append(i)
-            
-            else:
-                helperList.append(i)
-                resultDict[page].append(helperList)
-                helperList=list()
-            counter+=1
-                
-
-        return resultDict[page]
+    def cube_rotation(self, page):
+        # selected page rotation
+        act_page = self.Cube[page]
+        layers = int(len(act_page) / 2)
 
 
         
