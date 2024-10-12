@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 class Cube:
     def __init__(self, n):
         self.n = n
@@ -23,8 +26,56 @@ class Cube:
             'D':[['Y' for _ in range(n)] for _ in range(n)], # Down: Yellow
         }
         return n_size_cube
-    
+
+    def draw_square(self, ax, position, face, face_color):
+        for i in range(3):
+            for j in range(3):
+                # Egy négyzet sarkainak koordinátái
+                square = [
+                    [position[0] + i, position[1] + j, position[2]],
+                    [position[0] + i + 1, position[1] + j, position[2]],
+                    [position[0] + i + 1, position[1] + j + 1, position[2]],
+                    [position[0] + i, position[1] + j + 1, position[2]]
+                ]
+                # Négyzet hozzáadása a megfelelő színnel
+                ax.add_collection3d(Poly3DCollection([square], color=face_color[face[i][j]], edgecolors='black'))
+
     def print_cube(self):
+        colors = {
+            'R': 'red',
+            'O': 'orange',
+            'G': 'green',
+            'B': 'blue',
+            'W': 'white',
+            'Y': 'yellow'
+        }
+
+        fig = plt.figure()# 3D plot beállítása
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Front (Z = 0)
+        self.draw_square(ax, (0, 0, 0), self.Cube['F'], colors)
+        # Back (Z = 3)
+        self.draw_square(ax, (0, 0, 3), self.Cube['B'], colors)
+        # Left (X = 0)
+        self.draw_square(ax, (0, 0, 0), self.Cube['L'], colors)
+        # Right (X = 3)
+        self.draw_square(ax, (3, 0, 0), self.Cube['R'], colors)
+        # Top (Y = 3)
+        self.draw_square(ax, (0, 3, 0), self.Cube['T'], colors)
+        # Bottom (Y = 0)
+        self.draw_square(ax, (0, 0, 0), self.Cube['B'], colors)
+
+        # Axes beállítása
+        ax.set_xlim([0, 3])
+        ax.set_ylim([0, 3])
+        ax.set_zlim([0, 3])
+
+        # Plot megjelenítése
+        plt.show()
+
+
         for face, grid in self.Cube.items():
             print(f"{face} face:")
             for row in grid:
