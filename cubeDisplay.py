@@ -112,6 +112,10 @@ from ursina import *
 class CubeDisplay(Entity):  # A CubeDisplay osztály öröklődik az Entity osztályból
     def __init__(self):
         super().__init__()  # Hívja meg az Entity konstruktorát
+        window.borderless = False
+        window.fullscreen = False
+        window.exit_button.visible = False
+        window.fps_counter.enabled = True
         self.cube_model, self.cube_texture = 'models/custom_cube', 'textures/rubik_texture'
         
         # A háttér létrehozása
@@ -126,25 +130,36 @@ class CubeDisplay(Entity):  # A CubeDisplay osztály öröklődik az Entity oszt
          self.create_cube_positions()
          self.CUBES = []
          self.initial_positions = {}
+         self.PARENT = Entity(model='cube', color=color.black)
          for idx, pos in enumerate(self.SIDE_POSITIONS):
-             cube = Entity(model=self.cube_model, texture=self.cube_texture, position=pos)
+             cube = Entity(parent=self.PARENT,model=self.cube_model, texture=self.cube_texture, position=pos)
              cube.id = idx
              self.CUBES.append(cube)
              self.initial_positions[idx] = pos
-         self.PARENT = Entity(model='cube', color=color.black)
+         
          self.rotation_axes = {'LEFT': 'x','RIGHT':'x','TOP': 'y' , 'BOTTOM': 'y', 'FACE': 'z', 'BACK': 'z'}
          self.cubes_side_positions = {'LEFT': self.LEFT, 'BOTTOM': self.BOTTOM, 'RIGHT': self.RIGHT, 'FACE': self.FACE, 'BACK': self.BACK, 'TOP': self.TOP}
+         
          self.animation_time = 0.5
 
     def rotate_side(self, side_name):
         cube_positions = self.cubes_side_positions[side_name]
         rotation_axis = self.rotation_axes[side_name]
         self.reparent_to_scene()
+        # print(cube_positions, rotation_axis)
         for cube in self.CUBES:
-            if cube.position in cube_positions:
+            coordinates=cube.position.x,cube.position.y,cube.position.z
+            if coordinates in cube_positions:
                 cube.parent = self.PARENT
-                eval(f'self.PARENT.animate_rotation_{rotation_axis}(90, duration=self.animation_time)')
-                     
+                
+                if rotation_axis == 'x':
+                    self.PARENT.animate_rotation_x(90, duration=self.animation_time)
+                elif rotation_axis == 'y':
+                    self.PARENT.animate_rotation_y(90, duration=self.animation_time)
+                elif rotation_axis == 'z':
+                    self.PARENT.animate_rotation_z(90, duration=self.animation_time)
+                
+
     def reparent_to_scene(self):
         for cube in self.CUBES:
             if cube.parent == self.PARENT:
@@ -160,7 +175,7 @@ class CubeDisplay(Entity):  # A CubeDisplay osztály öröklődik az Entity oszt
         self.BACK = {(x, y, 1) for x in range(-1, 2) for y in range(-1, 2)}
         self.RIGHT = {(1, y, z) for y in range(-1, 2) for z in range(-1, 2)}
         self.TOP = {(x, 1, z) for x in range(-1, 2) for z in range(-1, 2)}
-        self.SIDE_POSITIONS = self.LEFT | self.BOTTOM   | self.FACE | self.BACK | self.RIGHT | self.TOP
+        self.SIDE_POSITIONS = self.LEFT | self.BOTTOM  | self.FACE | self.BACK | self.RIGHT | self.TOP
         
     def is_solved(self):
         for cube in self.CUBES:
@@ -169,7 +184,7 @@ class CubeDisplay(Entity):  # A CubeDisplay osztály öröklődik az Entity oszt
         return True
 
     def input(self, key):
-        print(key)
+        # print(key)
         if key=='a':
             self.rotate_side('LEFT')
         if key=='d':
