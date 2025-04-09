@@ -1,10 +1,5 @@
-
-
-#majdnem mukodik
-
 from ursina import *
 import numpy as np
-import copy
 
 class RubiksCube(Entity):
     def __init__(self, size=3):
@@ -13,13 +8,10 @@ class RubiksCube(Entity):
         self.cube_model, self.cube_texture = 'models/custom_cube', 'textures/rubik_texture'
         self.size = size
         self.cube_size = 0.95  # Size of each individual cube
-        self.spacing = 0  # Space between cubes
+        self.spacing = 0.05    # Space between cubes
         self.cubes = []
         self.rotating = False
-        self.rotation_duration = 0.3
-        
-        # Create parent entity for rotations
-        self.rotater = Entity()
+        self.rotation_duration = 0.5
         
         # Create the cube
         self.create_cube()
@@ -31,7 +23,7 @@ class RubiksCube(Entity):
         self.create_ui()
         
         # Debug mode
-        self.debug = False
+        self.debug = True  # Set to True to help debug
     
     def create_ui(self):
         # Layer indicator
@@ -97,78 +89,72 @@ class RubiksCube(Entity):
             self.rotating = False
             return
         
-        # Reset rotater
-        self.rotater.position = (0, 0, 0)
-        self.rotater.rotation = (0, 0, 0)
+        # Create a parent entity for rotation
+        rotater = Entity()
         
         # Parent cubes to rotater
         for cube_data in cube_data_list:
             cube = cube_data['entity']
             # Store world position before parenting
-            world_pos = cube.world_position
+            world_pos = Vec3(cube.world_position.x, cube.world_position.y, cube.world_position.z)
             # Parent to rotater
-            cube.parent = self.rotater
+            cube.parent = rotater
             # Restore world position
             cube.world_position = world_pos
         
         # Set rotation direction
         direction = 1 if clockwise else -1
         
-        # # Perform rotation animation
+        # Perform rotation
         if axis == 'x':
-            self.rotater.animate_rotation_x(90 * direction, duration=self.rotation_duration, curve=curve.linear)
+            rotater.animate_rotation_x(90 * direction, duration=self.rotation_duration)
         elif axis == 'y':
-            self.rotater.animate_rotation_y(90 * direction, duration=self.rotation_duration, curve=curve.linear)
+            rotater.animate_rotation_y(90 * direction, duration=self.rotation_duration)
         elif axis == 'z':
-            self.rotater.animate_rotation_z(90 * direction, duration=self.rotation_duration, curve=curve.linear)
+            rotater.animate_rotation_z(90 * direction, duration=self.rotation_duration)
         
-        # After animation completes, update grid positions and reparent
-        invoke(lambda: self.finish_rotation(axis, layer_index, cube_data_list, clockwise), 
+        # After animation completes, update grid positions
+        invoke(lambda: self.finish_rotation(axis, layer_index, cube_data_list, rotater, clockwise), 
                delay=self.rotation_duration + 0.1)
     
-    def finish_rotation(self, axis, layer_index, cube_data_list, clockwise):
-        """Finish rotation by updating grid positions and reparenting cubes."""
-        # Create a temporary list to store new grid positions
-        new_grid_positions = {} 
+    def finish_rotation(self, axis, layer_index, cube_data_list, rotater, clockwise):
+        """Finish rotation by updating grid positions."""
+        # Create a temporary dictionary to store new grid positions
+        new_grid_positions = {}
         
-        # Calculate new grid positions based on rotation
+        # First pass: calculate new grid positions
         for cube_data in cube_data_list:
             entity = cube_data['entity']
             x, y, z = cube_data['grid']
             
             # Calculate new grid position based on rotation
-            new_x, new_y, new_z = x, y, z  # Default: no change
-            
             if axis == 'x':
-                # X-axis rotation (around the YZ plane)
-                if clockwise:
-                    new_y, new_z = z, self.size - 1 - y
-                else:
-                    new_y, new_z = self.size - 1 - z, y
+                # X-axis rotation (around the x-axis) - FIXED
+                if clockwise:  # Clockwise looking from positive x towards origin
+                    new_grid_positions[entity] = (x, self.size-1-z, y)
+                else:  # Counter-clockwise
+                    new_grid_positions[entity] = (x, z, self.size-1-y)
             
             elif axis == 'y':
-                # Y-axis rotation (around the XZ plane)
-                if clockwise:
-                    new_x, new_z = self.size - 1 - z, x
-                else:
-                    new_x, new_z = z, self.size - 1 - x
+                # Y-axis rotation (around the y-axis)
+                if clockwise:  # Clockwise looking from positive y towards origin (top view)
+                    new_grid_positions[entity] = (z, y, self.size-1-x)
+                else:  # Counter-clockwise
+                    new_grid_positions[entity] = (self.size-1-z, y, x)
             
             elif axis == 'z':
-                # Z-axis rotation (around the XY plane)
-                if clockwise:
-                    new_x, new_y = y, self.size - 1 - x
-                else:
-                    new_x, new_y = self.size - 1 - y, x
-            
-            # Store the new grid position
-            new_grid_positions[entity] = (new_x, new_y, new_z)
-            
-            if self.debug:
-                print(f"Cube at {(x,y,z)} moved to {(new_x, new_y, new_z)}")
+                # Z-axis rotation (around the z-axis)
+                if clockwise:  # Clockwise looking from positive z towards origin
+                    new_grid_positions[entity] = (y, self.size-1-x, z)
+                else:  # Counter-clockwise
+                    new_grid_positions[entity] = (self.size-1-y, x, z)
         
-        # Update grid positions and reparent cubes
+        # Second pass: update grid positions and reparent cubes
         for cube_data in cube_data_list:
             entity = cube_data['entity']
+            
+            # Store original grid for debugging
+            original_grid = cube_data['grid']
             
             # Update grid position
             if entity in new_grid_positions:
@@ -184,18 +170,24 @@ class RubiksCube(Entity):
                 z - (self.size-1)/2
             )
             
-            # Store world rotation
-            world_rot = entity.world_rotation
+            # Get the current world rotation after the animation
+            world_rot = Vec3(entity.world_rotation.x, entity.world_rotation.y, entity.world_rotation.z)
             
             # Reparent to scene
             entity.parent = scene
             
-            # Set position and restore rotation
+            # Set position
             entity.position = new_pos
+            
+            # Preserve the rotation that was applied during the animation
             entity.rotation = world_rot
+            
+            if self.debug:
+                print(f"Axis: {axis}, Direction: {'CW' if clockwise else 'CCW'}")
+                print(f"Cube moved from {original_grid} to {new_grid_positions.get(entity, original_grid)}")
         
-        # Reset rotater
-        self.rotater.rotation = (0, 0, 0)
+        # Destroy the rotater entity
+        destroy(rotater)
         
         # Allow new rotations
         self.rotating = False
@@ -259,8 +251,7 @@ if __name__ == '__main__':
     camera.look_at(Vec3(0, 0, 0))
     
     # Create cube (change size parameter for different cube dimensions)
-    cube = RubiksCube(size=6)
+    cube = RubiksCube(size=5)
     
     app.run()
-
 
