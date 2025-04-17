@@ -247,7 +247,7 @@ if __name__ == '__main__':
     
     # Set up camera
     camera_entity = EditorCamera()
-    camera.position = (5, 5, -10)
+    camera.position = (0, 0, 0)
     camera.look_at(Vec3(0, 0, 0))
     
     # Create cube (change size parameter for different cube dimensions)
