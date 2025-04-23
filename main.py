@@ -1,5 +1,6 @@
 from ursina import *
 import numpy as np
+import time
 
 class RubiksCube(Entity):
     def __init__(self, size=3):
@@ -24,10 +25,18 @@ class RubiksCube(Entity):
         
         # Debug mode
         self.debug = True  # Set to True to help debug
+        
+        # Auto-rotation variables
+        self.auto_rotating = False
+        self.rotations_count = 0
+        self.total_rotations = 100  # Number of rotations to perform when 'g' is pressed
     
     def create_ui(self):
         # Layer indicator
         self.layer_text = Text(text=f"Layer: {self.current_layer}", position=(-0.7, 0.45))
+        
+        # Auto-rotation counter
+        self.rotation_counter = Text(text="", position=(-0.7, 0.4))
         
         # Instructions
         instructions = [
@@ -37,6 +46,7 @@ class RubiksCube(Entity):
             "Y: Rotate Y-axis",
             "Z: Rotate Z-axis",
             "Hold Shift: Rotate counter-clockwise",
+            "G: Auto-rotate 100 times",
             "D: Toggle debug mode"
         ]
         # Text(text="\n".join(instructions), position=(-0.7, 0.35), scale=1.5, color=color.light_gray)
@@ -80,13 +90,21 @@ class RubiksCube(Entity):
     def rotate_layer(self, axis, layer_index, clockwise=True):
         """Rotate a specific layer around an axis."""
         if self.rotating:
+            if self.debug:
+                print("Already rotating, ignoring rotation request")
             return
         
         self.rotating = True
+        if self.debug:
+            print(f"Starting rotation: axis={axis}, layer={layer_index}, clockwise={clockwise}")
+        
         cube_data_list = self.get_layer_cubes(axis, layer_index)
         
         if not cube_data_list:
+            if self.debug:
+                print(f"No cubes found in layer {layer_index} for axis {axis}")
             self.rotating = False
+            self.check_continue_auto_rotation()
             return
         
         # Create a parent entity for rotation
@@ -119,6 +137,9 @@ class RubiksCube(Entity):
     
     def finish_rotation(self, axis, layer_index, cube_data_list, rotater, clockwise):
         """Finish rotation by updating grid positions."""
+        if self.debug:
+            print(f"Finishing rotation: axis={axis}, layer={layer_index}")
+            
         # Create a temporary dictionary to store new grid positions
         new_grid_positions = {}
         
@@ -184,13 +205,34 @@ class RubiksCube(Entity):
             
             if self.debug:
                 print(f"Axis: {axis}, Direction: {'CW' if clockwise else 'CCW'}")
-                print(f"Cube moved from {original_grid} to {new_grid_positions.get(entity, original_grid)}")
+                print(f"Cube moved from {original_grid} to {cube_data['grid']}")
         
         # Destroy the rotater entity
         destroy(rotater)
         
         # Allow new rotations
         self.rotating = False
+        if self.debug:
+            print("Rotation completed, ready for next rotation")
+        
+        # If we're auto-rotating, continue with the next rotation
+        self.check_continue_auto_rotation()
+    
+    def check_continue_auto_rotation(self):
+        """Check if we should continue with auto-rotation."""
+        if self.auto_rotating:
+            self.rotations_count += 1
+            self.rotation_counter.text = f"Auto-rotations: {self.rotations_count}/{self.total_rotations}"
+            
+            if self.rotations_count < self.total_rotations:
+                # Schedule the next rotation with a small delay
+                invoke(self.random_rotation, delay=0.1)
+            else:
+                # We've completed all rotations
+                self.auto_rotating = False
+                self.rotations_count = 0
+                self.rotation_counter.text = "Auto-rotation complete!"
+                invoke(lambda: setattr(self.rotation_counter, 'text', ''), delay=2)
     
     def rotate_x(self, layer, clockwise=True):
         """Rotate a layer around the X axis."""
@@ -209,6 +251,40 @@ class RubiksCube(Entity):
         if layer >= 0 and layer < self.size:
             self.current_layer = layer
             self.layer_text.text = f"Layer: {self.current_layer}"
+    
+    def random_rotation(self):
+        """Perform a random rotation."""
+        if self.rotating:
+            if self.debug:
+                print("Already rotating, skipping random rotation")
+            return
+            
+        randAxis = np.random.randint(0, 3)
+        randLayer = np.random.randint(0, self.size)
+        randClockwise = bool(np.random.randint(0, 2))
+        
+        if self.debug:
+            print(f"Random rotation: axis={randAxis}, layer={randLayer}, clockwise={randClockwise}")
+            
+        if randAxis == 0:
+            self.rotate_x(randLayer, randClockwise)
+        elif randAxis == 1:
+            self.rotate_y(randLayer, randClockwise)
+        else:
+            self.rotate_z(randLayer, randClockwise)
+    
+    def start_auto_rotation(self):
+        """Start auto-rotating the cube."""
+        if self.auto_rotating:
+            # Already auto-rotating, do nothing
+            return
+            
+        self.auto_rotating = True
+        self.rotations_count = 0
+        self.rotation_counter.text = f"Auto-rotations: {self.rotations_count}/{self.total_rotations}"
+        
+        # Start the first random rotation
+        self.random_rotation()
     
     def input(self, key):
         """Handle input."""
@@ -230,6 +306,8 @@ class RubiksCube(Entity):
         elif key == 'd':
             self.debug = not self.debug
             print(f"Debug mode: {'ON' if self.debug else 'OFF'}")
+        elif key == 'g':
+            self.start_auto_rotation()
 
 # Main application
 if __name__ == '__main__':
@@ -251,7 +329,6 @@ if __name__ == '__main__':
     camera.look_at(Vec3(0, 0, 0))
     
     # Create cube (change size parameter for different cube dimensions)
-    cube = RubiksCube(size=5)
+    cube = RubiksCube(size=10)
     
     app.run()
-
