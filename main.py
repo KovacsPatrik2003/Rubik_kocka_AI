@@ -51,26 +51,54 @@ class RubiksCube(Entity):
         ]
         # Text(text="\n".join(instructions), position=(-0.7, 0.35), scale=1.5, color=color.light_gray)
     
-    def create_cube(self):
+    def create_cube(self, for_Is_Solved=False, size=2):
         # Create cubes
-        for x in range(self.size):
-            for y in range(self.size):
-                for z in range(self.size):
-                    # Only create cubes on the outside for optimization
-                    if x == 0 or x == self.size-1 or y == 0 or y == self.size-1 or z == 0 or z == self.size-1:
-                        # Create cube with custom model and texture
-                        cube = Entity(
-                            model=self.cube_model,
-                            texture=self.cube_texture,
-                            position=(x-(self.size-1)/2, y-(self.size-1)/2, z-(self.size-1)/2),
-                            scale=self.cube_size
-                        )
-                        
-                        # Store cube with its grid position
-                        self.cubes.append({
-                            'entity': cube,
-                            'grid': (x, y, z)
-                        })
+        id=0
+        if for_Is_Solved:
+            result=[]
+            for x in range(size):
+                for y in range(size):
+                    for z in range(size):
+                        # Only create cubes on the outside for optimization
+                        if x == 0 or x == size-1 or y == 0 or y == size-1 or z == 0 or z == size-1:
+                            # Create cube with custom model and texture
+                            cube = Entity(
+                                model='models/custom_cube',
+                                texture='textures/rubik_texture',
+                                position=(x-(size-1)/2, y-(size-1)/2, z-(size-1)/2),
+                                scale=size
+                            )
+                            
+                            # Store cube with its grid position
+                            result.append({
+                                'entity': cube,
+                                'grid': (x, y, z),
+                                'id': id
+                            })
+                            id+=1
+            return result
+        else:
+            for x in range(self.size):
+                for y in range(self.size):
+                    for z in range(self.size):
+                        # Only create cubes on the outside for optimization
+                        if x == 0 or x == self.size-1 or y == 0 or y == self.size-1 or z == 0 or z == self.size-1:
+                            # Create cube with custom model and texture
+                            cube = Entity(
+                                model=self.cube_model,
+                                texture=self.cube_texture,
+                                position=(x-(self.size-1)/2, y-(self.size-1)/2, z-(self.size-1)/2),
+                                scale=self.cube_size
+                            )
+                            
+                            # Store cube with its grid position
+                            self.cubes.append({
+                                'entity': cube,
+                                'grid': (x, y, z),
+                                'id': id
+                            })
+                            id+=1
+        
     
     def get_layer_cubes(self, axis, layer_index):
         """Get all cubes in a specific layer."""
@@ -87,7 +115,7 @@ class RubiksCube(Entity):
         
         return layer_cubes
     
-    def rotate_layer(self, axis, layer_index, clockwise=True):
+    def rotate_layer(self, axis, layer_index, clockwise=True, visualize=True):
         """Rotate a specific layer around an axis."""
         if self.rotating:
             if self.debug:
@@ -124,16 +152,20 @@ class RubiksCube(Entity):
         direction = 1 if clockwise else -1
         
         # Perform rotation
-        if axis == 'x':
+        if axis == 'x' and visualize:
             rotater.animate_rotation_x(90 * direction, duration=self.rotation_duration)
-        elif axis == 'y':
+            print('belepett ide')
+        elif axis == 'y' and visualize:
             rotater.animate_rotation_y(90 * direction, duration=self.rotation_duration)
-        elif axis == 'z':
+        elif axis == 'z' and visualize:
             rotater.animate_rotation_z(90 * direction, duration=self.rotation_duration)
         
         # After animation completes, update grid positions
-        invoke(lambda: self.finish_rotation(axis, layer_index, cube_data_list, rotater, clockwise), 
+        if visualize:
+            invoke(lambda: self.finish_rotation(axis, layer_index, cube_data_list, rotater, clockwise), 
                delay=self.rotation_duration + 0.1)
+        else:
+            self.finish_rotation(axis, layer_index, cube_data_list, rotater, clockwise)
     
     def finish_rotation(self, axis, layer_index, cube_data_list, rotater, clockwise):
         """Finish rotation by updating grid positions."""
@@ -234,17 +266,17 @@ class RubiksCube(Entity):
                 self.rotation_counter.text = "Auto-rotation complete!"
                 invoke(lambda: setattr(self.rotation_counter, 'text', ''), delay=2)
     
-    def rotate_x(self, layer, clockwise=True):
+    def rotate_x(self, layer, clockwise=True, visualize=True):
         """Rotate a layer around the X axis."""
-        self.rotate_layer('x', layer, clockwise)
+        self.rotate_layer('x', layer, clockwise, visualize)
     
-    def rotate_y(self, layer, clockwise=True):
+    def rotate_y(self, layer, clockwise=True, visualize=True):
         """Rotate a layer around the Y axis."""
-        self.rotate_layer('y', layer, clockwise)
+        self.rotate_layer('y', layer, clockwise, visualize)
     
-    def rotate_z(self, layer, clockwise=True):
+    def rotate_z(self, layer, clockwise=True, visualize=True):
         """Rotate a layer around the Z axis."""
-        self.rotate_layer('z', layer, clockwise)
+        self.rotate_layer('z', layer, clockwise, visualize)
     
     def update_layer(self, layer):
         """Update the current layer."""

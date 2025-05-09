@@ -83,4 +83,9 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    visualize(args.model, args.scramble, args.max_steps, args.delay)
+    # Ensure model path has the correct extension
+    model_path = args.model
+    if not model_path.endswith('.weights.h5') and model_path.endswith('.h5'):
+        model_path = model_path.replace('.h5', '.weights.h5')
+    
+    visualize(model_path, args.scramble, args.max_steps, args.delay)
